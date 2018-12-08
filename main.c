@@ -13,21 +13,21 @@
 int time = 0;
 
 typedef struct {
-	int age;
-	int valid;
-	int modified;
-	uint32_t tag;
+	int age;	//cache->sets[i].lines[j].age   --> for LRU
+	int valid;  //cache->sets[i].lines[j].valid
+	int modified; // cache->sets[i].lines[j].modified
+	uint32_t tag; // cache->sets[i].lines[j].tag
 } cline;
 
 typedef struct {
-	cline *lines;
+	cline *lines; // cache->sets[i].lines[j]
 } cset;
 
 typedef struct {
-	int s;
-	int E;
-	int b;
-	cset *sets;
+	int s; // set 비트 수?
+	int E; // way 비트 수
+	int b; // block size?
+	cset *sets; // cache->sets[i]
 } cache;
 
 static int index_bit(int n) {
@@ -39,8 +39,24 @@ static int index_bit(int n) {
 	return cnt-1;
 }
 
-void build_cache() {
+cache build_cache(int set, int capacity, int way, int blocksize) {
+	// malloc for cache
+	// cache[set][assoc][word per block]
+	//32비트가 워드 하나로 고정임 항상
+	cache myCache;
+	myCache.E = index_bit(way); //
+	myCache.s = index_bit(set); //index bit
+	myCache.b = index_bit(blocksize); //offset bit
 
+	myCache.sets = (cset *)malloc(set*sizeof(cset));
+
+	for(int i=0; i<set; i++){
+		myCache.sets[i].lines = (cline *)malloc(way*sizeof(cline));
+	}
+
+	// Cache.sets[0].lines[0].tag = 0x00000002; 이런식의 assign 가능
+	
+	return myCache;
 }
 
 void access_cache() {
@@ -143,11 +159,11 @@ void xdump(cache* L)
 			{
 				printf("          ");
 			}
-			if(L->sets[i].lines[j].valid){
-				line = L->sets[i].lines[j].tag << (s+b);
-				line = line|(i << b);
+			if(L->sets[i].lines[j].valid){	// 캐시에 있으면 (valid == 1) 이면, 블락의 베이스 주소로 변환
+				line = L->sets[i].lines[j].tag << (s+b);     // 
+				line = line|(i << b); // b-> log2(block size)   --> 뒷 자리 바꿔줌
 			}
-			else{
+			else{					// 캐시 비어있으면 0x0000 0000 출력
 				line = 0;
 			}
 			printf("0x%08x  ", line);
@@ -216,10 +232,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	// allocate
-	set = capacity/way/blocksize;
+	set = capacity/way/blocksize;   // index
 
     /* TODO: Define a cache based on the struct declaration */
-    // simCache = build_cache();
+    simCache = build_cache(set, capacity, way, blocksize);
+
+    //printf("tag: 0x%x\n", simCache.sets[0].lines[0].tag);  이런식 출력 가능
 
 	// simulate
 	fp = fopen(trace_name, "r"); // read trace file
