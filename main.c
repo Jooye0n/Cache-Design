@@ -65,7 +65,10 @@ cache build_cache(int set, int capacity, int way, int blocksize) {
 }
 
 void free_cache(cache *myCache, int set, int way){
-
+	for(int i=0; i<set; i++){
+		free(myCache->sets[i].lines);
+	}
+	free(myCache->sets);
 }
 
 void access_cache(cache *myCache, char *op, uint32_t addr,
@@ -365,7 +368,7 @@ int main(int argc, char *argv[]) {
 	    	xdump(&simCache);
 	}
 
-	// free_cache(&simCache, set ,way);
+	free_cache(&simCache, set ,way);
 
     return 0;
 }
